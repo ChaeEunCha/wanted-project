@@ -50,7 +50,7 @@ export const MOCK_CATEGORY_TAGS: CategoryTag[] = [
   },
 ];
 
-const MOCK_SKILL_TAGS: SkillTag[] = [
+export const MOCK_SKILL_TAGS: SkillTag[] = [
   { id: 1540, title: "Java" },
   { id: 517, title: "JavaScript" },
   { id: 663, title: "TypeScript" },

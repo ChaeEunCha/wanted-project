@@ -26,7 +26,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           id={inputId}
           aria-invalid={!!error}
           aria-describedby={error ? `${inputId}-error` : undefined}
-          className={`h-11 w-full rounded-lg border px-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:bg-zinc-900 dark:text-zinc-100 ${
+          className={`h-11 w-full rounded-lg border px-3 text-sm outline-none transition-colors placeholder:text-zinc-400 focus:border-violet-30 focus:ring-1 focus:ring-violet-30 dark:bg-zinc-900 dark:text-zinc-100 ${
             error
               ? "border-red-400"
               : "border-zinc-300 dark:border-zinc-700"
