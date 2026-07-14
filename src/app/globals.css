@@ -3,6 +3,22 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /*
+   * violet 팔레트 (.claude/agents/product-designer.md 컬러 스와치 표 기준).
+   * 기준색(Primary)은 violet-30(#B497F5). 앞 번호(10/20)는 밝은 파스텔 배경/보조용,
+   * 뒤 번호(40~90)는 어두운 텍스트/강조/active 상태용.
+   * 이번 작업(용어 툴팁 P2)에서 새로 도입 — 기존 indigo 기반 공용 컴포넌트에는 영향 없음.
+   */
+  --color-violet-10: #f4effe;
+  --color-violet-20: #e5dbfc;
+  --color-violet-30: #b497f5;
+  --color-violet-40: #9980d0;
+  --color-violet-50: #7e6aac;
+  --color-violet-60: #635387;
+  --color-violet-70: #483c62;
+  --color-violet-80: #2d263d;
+  --color-violet-90: #120f19;
 }
 
 @theme inline {
@@ -10,6 +26,16 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --color-violet-10: var(--color-violet-10);
+  --color-violet-20: var(--color-violet-20);
+  --color-violet-30: var(--color-violet-30);
+  --color-violet-40: var(--color-violet-40);
+  --color-violet-50: var(--color-violet-50);
+  --color-violet-60: var(--color-violet-60);
+  --color-violet-70: var(--color-violet-70);
+  --color-violet-80: var(--color-violet-80);
+  --color-violet-90: var(--color-violet-90);
 }
 
 @media (prefers-color-scheme: dark) {
