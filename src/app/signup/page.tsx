@@ -15,10 +15,9 @@ import {
 
 /**
  * P0 회원가입 화면 (PRD.md 5-2절).
- * TODO(백엔드 연동): 실제로는 여기서 서버 API(POST /api/auth/signup 등)를 호출해
- * `users` 테이블에 email/password_hash를 저장하고 세션 또는 JWT를 발급해야 한다.
- * 인증 방식(세션 vs JWT), 소셜 로그인 도입 여부는 PRD 5-2절 기준 아직 미정이라
- * 여기서는 브라우저 localStorage 기반 mock 저장소(src/lib/authStore.ts)로 대체한다.
+ * Supabase Auth(`supabase.auth.signUp`)로 계정을 생성한다 — src/lib/authStore.ts 참고.
+ * 이메일 확인(Confirm email) 설정이 켜져 있는 프로젝트라면 가입 직후 세션이 없을 수 있어
+ * 프로필 페이지 진입 시 로그인이 다시 필요할 수 있다.
  */
 export default function SignupPage() {
   const router = useRouter();
@@ -33,7 +32,7 @@ export default function SignupPage() {
   }>({});
   const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
     const emailError = validateEmail(email);
@@ -50,7 +49,7 @@ export default function SignupPage() {
     }
 
     setSubmitting(true);
-    const result = signUp(email, password);
+    const result = await signUp(email, password);
     setSubmitting(false);
 
     if (!result.ok) {

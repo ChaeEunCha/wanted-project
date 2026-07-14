@@ -10,9 +10,8 @@ import { logIn } from "@/lib/authStore";
 import { validateEmail } from "@/lib/validation";
 
 /**
- * TODO(백엔드 연동): 실제로는 서버 API(POST /api/auth/login 등)로 인증하고
- * 세션 쿠키 또는 JWT를 발급받아야 한다. 여기서는 src/lib/authStore.ts의
- * localStorage mock 저장소를 사용한다.
+ * P0 로그인 화면 (PRD.md 5-2절).
+ * Supabase Auth(`supabase.auth.signInWithPassword`)로 인증한다 — src/lib/authStore.ts 참고.
  */
 export default function LoginPage() {
   const router = useRouter();
@@ -24,7 +23,7 @@ export default function LoginPage() {
   }>({});
   const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
     const emailError = validateEmail(email);
@@ -34,7 +33,7 @@ export default function LoginPage() {
     }
 
     setSubmitting(true);
-    const result = logIn(email, password);
+    const result = await logIn(email, password);
     setSubmitting(false);
 
     if (!result.ok) {
