@@ -56,6 +56,9 @@ export default function DashboardPage() {
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [jobs, setJobs] = useState<JobWithBadges[]>([]);
   const [hasNext, setHasNext] = useState(false);
+  // entry-level 필터링 때문에 배치마다 결과 수가 달라 jobs.length를 다음 offset으로 쓸 수
+  // 없다 — 서버가 알려주는 원본 목록 커서(nextOffset)를 그대로 이어받는다.
+  const [nextOffset, setNextOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +99,7 @@ export default function DashboardPage() {
         if (cancelled) return;
         setJobs(data.jobs ?? []);
         setHasNext(Boolean(data.hasNext));
+        setNextOffset(Number(data.nextOffset) || 0);
       })
       .catch(() => {
         if (!cancelled) setError("공고를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
@@ -113,7 +117,7 @@ export default function DashboardPage() {
     const params = new URLSearchParams();
     selectedSubTags.forEach((tag) => params.append("category_tags", String(tag.id)));
     selectedRegions.forEach((region) => params.append("locations", region));
-    params.set("offset", String(jobs.length));
+    params.set("offset", String(nextOffset));
     params.set("limit", String(PAGE_SIZE));
 
     setLoadingMore(true);
@@ -124,6 +128,7 @@ export default function DashboardPage() {
       const data = await res.json();
       setJobs((prev) => [...prev, ...(data.jobs ?? [])]);
       setHasNext(Boolean(data.hasNext));
+      setNextOffset(Number(data.nextOffset) || 0);
     } catch {
       setError("공고를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
