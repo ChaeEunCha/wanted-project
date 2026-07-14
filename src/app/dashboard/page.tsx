@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
+import { DdayBadge } from "@/components/ui/DdayBadge";
+import { EntryFriendlyBadge } from "@/components/ui/EntryFriendlyBadge";
+import { FilterChip } from "@/components/ui/FilterChip";
 import type { CategoryTag, CategorySubTag, JobWithBadges } from "@/lib/types";
 
 // openapi.json의 `/jobs` `locations` 파라미터는 배열 문자열일 뿐 별도 enum이 없어
@@ -12,50 +15,15 @@ const REGION_OPTIONS = ["서울", "경기", "인천", "부산", "대구", "대�
 
 const PAGE_SIZE = 12;
 
-function computeDDay(dueTime?: string): string {
-  if (!dueTime) return "상시";
-  const due = new Date(dueTime);
-  if (Number.isNaN(due.getTime())) return "상시";
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  due.setHours(0, 0, 0, 0);
-  const diffDays = Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return "마감";
-  if (diffDays === 0) return "D-day";
-  return `D-${diffDays}`;
-}
-
-function ToggleButton({
-  label,
-  selected,
-  onClick,
-}: {
-  label: string;
-  selected: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onClick}
-      className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-        selected
-          ? "border-indigo-600 bg-indigo-600 text-white"
-          : "border-zinc-300 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
-      }`}
-    >
-      {label}
-    </button>
-  );
-}
-
 export default function DashboardPage() {
   const [categories, setCategories] = useState<CategoryTag[]>([]);
   const [selectedSubTags, setSelectedSubTags] = useState<CategorySubTag[]>([]);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [jobs, setJobs] = useState<JobWithBadges[]>([]);
   const [hasNext, setHasNext] = useState(false);
+  // entry-level 필터링 때문에 배치마다 결과 수가 달라 jobs.length를 다음 offset으로 쓸 수
+  // 없다 — 서버가 알려주는 원본 목록 커서(nextOffset)를 그대로 이어받는다.
+  const [nextOffset, setNextOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +64,7 @@ export default function DashboardPage() {
         if (cancelled) return;
         setJobs(data.jobs ?? []);
         setHasNext(Boolean(data.hasNext));
+        setNextOffset(Number(data.nextOffset) || 0);
       })
       .catch(() => {
         if (!cancelled) setError("공고를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
@@ -113,7 +82,7 @@ export default function DashboardPage() {
     const params = new URLSearchParams();
     selectedSubTags.forEach((tag) => params.append("category_tags", String(tag.id)));
     selectedRegions.forEach((region) => params.append("locations", region));
-    params.set("offset", String(jobs.length));
+    params.set("offset", String(nextOffset));
     params.set("limit", String(PAGE_SIZE));
 
     setLoadingMore(true);
@@ -124,6 +93,7 @@ export default function DashboardPage() {
       const data = await res.json();
       setJobs((prev) => [...prev, ...(data.jobs ?? [])]);
       setHasNext(Boolean(data.hasNext));
+      setNextOffset(Number(data.nextOffset) || 0);
     } catch {
       setError("공고를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
@@ -165,7 +135,7 @@ export default function DashboardPage() {
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {category.sub_tags.map((subTag) => (
-                    <ToggleButton
+                    <FilterChip
                       key={subTag.id}
                       label={subTag.title}
                       selected={selectedSubTags.some((t) => t.id === subTag.id)}
@@ -185,7 +155,7 @@ export default function DashboardPage() {
           <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">지역</span>
           <div className="mt-3 flex flex-wrap gap-2">
             {REGION_OPTIONS.map((region) => (
-              <ToggleButton
+              <FilterChip
                 key={region}
                 label={region}
                 selected={selectedRegions.includes(region)}
@@ -232,14 +202,21 @@ function JobCard({ job }: { job: JobWithBadges }) {
           <CardTitle>{job.position}</CardTitle>
           <CardDescription>{job.company.name}</CardDescription>
         </div>
-        <span className="shrink-0 rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-          {computeDDay(job.due_time)}
-        </span>
+        {job.due_time ? (
+          <DdayBadge dueDate={job.due_time} className="shrink-0" />
+        ) : (
+          <span className="shrink-0 rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
+            상시
+          </span>
+        )}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {job.isTrulyEntryLevel && (
-          <Badge tone="green">진짜 신입 가능 · {job.entryLevelSupportingText}</Badge>
+          <>
+            <EntryFriendlyBadge />
+            <span className="text-xs text-zinc-400">{job.entryLevelSupportingText}</span>
+          </>
         )}
         {job.qualificationBadges.map((badge, index) => (
           <Badge key={`${badge.category}-${index}`} tone="violet">
