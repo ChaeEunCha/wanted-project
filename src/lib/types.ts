@@ -3,9 +3,10 @@
  *
  * - Wanted API 관련 타입(SkillTag, CategoryTag)은 openapi.json의
  *   ParentTagResponseSerializer / TagResponseSerializer 필드명을 그대로 따른다.
- * - User/Profile/Portfolio는 PRD.md 5-2절의 자체 DB 데이터 모델(users, profiles,
- *   profile_category_tags, profile_skill_tags, portfolios)을 프론트엔드 관점으로 옮긴 것으로,
- *   실제로는 백엔드 API 응답 타입으로 교체되어야 한다.
+ * - Profile/Portfolio는 DB.md 3.2~3.5절의 자체 DB 데이터 모델(profiles,
+ *   profile_category_tags, profile_skill_tags, portfolios)을 프론트엔드 관점으로 옮긴 것이다.
+ *   계정(회원가입/로그인)은 커스텀 users 테이블 대신 Supabase Auth(`auth.users`)를 사용하므로
+ *   별도의 User 타입 없이 src/lib/authStore.ts의 SessionUser({ id, email })를 사용한다.
  */
 
 /** 원티드 API `/tags/skills` 응답 항목 (`{id, title}`) */
@@ -50,9 +51,4 @@ export interface UserProfile {
   skillTags: SkillTag[];
   /** portfolios: URL 또는 파일, 최소 1개 이상 */
   portfolios: PortfolioEntry[];
-}
-
-export interface MockUser {
-  email: string;
-  createdAt: string;
 }

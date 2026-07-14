@@ -93,3 +93,17 @@ export function searchMockSkillTags(keyword: string): SkillTag[] {
     tag.title.toLowerCase().includes(trimmed)
   ).slice(0, 8);
 }
+
+/**
+ * DB(profile_category_tags)에는 category_tag_id만 저장하므로(DB.md 3.3절 — 제목/부모 태그는
+ * 캐시하지 않고 Wanted API 쪽 값을 정본으로 취급), 프로필을 다시 불러올 때는 이 목업 트리에서
+ * id로 역조회해 화면 표시용 제목/parent_id를 복원한다.
+ * TODO(백엔드 연동): 실제로는 `/tags/categories` 응답에서 역조회해야 한다.
+ */
+export function findMockCategorySubTag(id: number) {
+  for (const category of MOCK_CATEGORY_TAGS) {
+    const found = category.sub_tags.find((subTag) => subTag.id === id);
+    if (found) return found;
+  }
+  return undefined;
+}
