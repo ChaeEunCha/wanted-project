@@ -219,7 +219,9 @@ function JobCard({ job }: { job: JobWithBadges }) {
           </>
         )}
         {job.qualificationBadges.map((badge, index) => (
-          <Badge key={`${badge.category}-${index}`}>{badge.label}</Badge>
+          <Badge key={`${badge.category}-${index}`} tone="violet">
+            {badge.label}
+          </Badge>
         ))}
       </div>
 
