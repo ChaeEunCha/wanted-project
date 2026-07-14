@@ -242,7 +242,7 @@ function JobCard({ job }: { job: JobWithBadges }) {
           <Badge tone="green">진짜 신입 가능 · {job.entryLevelSupportingText}</Badge>
         )}
         {job.qualificationBadges.map((badge, index) => (
-          <Badge key={`${badge.category}-${index}`} tone="indigo">
+          <Badge key={`${badge.category}-${index}`} tone="violet">
             {badge.label}
           </Badge>
         ))}
