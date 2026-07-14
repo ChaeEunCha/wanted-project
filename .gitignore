@@ -1,4 +1,22 @@
 .DS_Store
 node_modules/
 .env
+.env*.local
 *.log
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# testing
+/coverage
+
+# production
+/build
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
