@@ -46,7 +46,7 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
   }, [id]);
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-12 sm:py-16">
+    <div className="mx-auto flex w-full flex-1 flex-col gap-6 px-4 sm:px-6 lg:px-10 py-12 sm:py-16">
       <Link
         href="/dashboard"
         className="text-sm font-medium text-zinc-500 hover:underline dark:text-zinc-400"

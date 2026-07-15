@@ -29,12 +29,9 @@ export default function SkillsDemoPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 py-12">
+    <div className="mx-auto flex w-full flex-1 flex-col gap-8 px-4 sm:px-6 lg:px-10 py-12">
       <div>
-        <p className="text-sm font-medium text-violet-50">
-          P2 · 용어 툴팁 데모
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-3xl">
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-3xl">
           기술 스택 태그, 몰라도 괜찮아요
         </h1>
         <p className="mt-3 text-sm text-zinc-500 dark:text-zinc-400">

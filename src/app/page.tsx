@@ -84,7 +84,7 @@ export default function Home() {
 
   if (state.kind === "loading") {
     return (
-      <div className="mx-auto flex w-full max-w-3xl flex-1 items-center justify-center px-4 py-16">
+      <div className="mx-auto flex w-full flex-1 items-center justify-center px-4 sm:px-6 lg:px-10 py-16">
         <p className="text-sm text-zinc-500 dark:text-zinc-400">확인 중...</p>
       </div>
     );
@@ -92,7 +92,7 @@ export default function Home() {
 
   if (state.kind === "incomplete") {
     return (
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-12 sm:py-16">
+      <div className="mx-auto flex w-full flex-1 flex-col gap-6 px-4 sm:px-6 lg:px-10 py-12 sm:py-16">
         <ProfileCompletionBanner profile={state.profile} />
       </div>
     );
@@ -107,13 +107,13 @@ export default function Home() {
 
 function GuestHome() {
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-10 px-4 py-16">
+    <div className="mx-auto flex w-full flex-1 flex-col gap-10 px-4 sm:px-6 lg:px-10 py-16">
       <div className="text-center sm:text-left">
         <p className="text-sm font-medium text-violet-60">
           원티드 API 기반 신입 구직자 대시보드
         </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50 sm:text-4xl">
-          처음 구직하는 당신을 위한
+          처음 구직하는 당신을 위한{" "}
           <br className="hidden sm:block" />
           진짜 맞춤 정보만 모았어요
         </h1>
@@ -132,7 +132,7 @@ function GuestHome() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <PainPointItem
           emoji="🎯"
           title="가짜 신입 공고 거르기"
@@ -261,7 +261,7 @@ function DashboardHome({
   }, []);
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-4 py-12 sm:py-16">
+    <div className="mx-auto flex w-full flex-1 flex-col gap-8 px-4 sm:px-6 lg:px-10 py-12 sm:py-16">
       <div>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           안녕하세요, <span className="font-semibold text-zinc-900 dark:text-zinc-50">{email}</span>님

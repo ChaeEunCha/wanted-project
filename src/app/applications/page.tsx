@@ -99,14 +99,14 @@ export default function ApplicationsPage() {
 
   if (!checked && loading) {
     return (
-      <div className="mx-auto flex w-full max-w-3xl flex-1 items-center justify-center px-4 py-16">
+      <div className="mx-auto flex w-full flex-1 items-center justify-center px-4 sm:px-6 lg:px-10 py-16">
         <p className="text-sm text-zinc-500 dark:text-zinc-400">확인 중...</p>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-12 sm:py-16">
+    <div className="mx-auto flex w-full flex-1 flex-col gap-6 px-4 sm:px-6 lg:px-10 py-12 sm:py-16">
       <div>
         <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50">
           지원 여정 칸반보드
