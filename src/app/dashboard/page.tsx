@@ -9,7 +9,9 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
 import { DdayBadge } from "@/components/ui/DdayBadge";
 import { EntryFriendlyBadge } from "@/components/ui/EntryFriendlyBadge";
 import { FilterChip } from "@/components/ui/FilterChip";
-import type { CategoryTag, CategorySubTag, JobWithBadges } from "@/lib/types";
+import { MatchDiagnosis } from "@/components/ui/MatchDiagnosis";
+import type { CategoryTag, CategorySubTag, JobWithBadges, UserProfile } from "@/lib/types";
+import { getProfile } from "@/lib/authStore";
 
 // openapi.json의 `/jobs` `locations` 파라미터는 배열 문자열일 뿐 별도 enum이 없어
 // 자주 쓰이는 지역명을 큐레이션한 정적 목록으로 대체한다.
@@ -30,6 +32,7 @@ export default function DashboardPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,6 +45,21 @@ export default function DashboardPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!userId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 로그아웃 시 이전 유저의 프로필을 즉시 비워야 매칭 진단에 남아있지 않는다
+      setProfile(null);
+      return;
+    }
+    let cancelled = false;
+    getProfile(userId).then((result) => {
+      if (!cancelled) setProfile(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -191,7 +209,7 @@ export default function DashboardPage() {
 
       <div className="flex flex-col gap-4">
         {jobs.map((job) => (
-          <JobCard key={job.id} job={job} userId={userId} />
+          <JobCard key={job.id} job={job} userId={userId} profile={profile} />
         ))}
       </div>
 
@@ -211,7 +229,15 @@ export default function DashboardPage() {
 
 type AddToKanbanState = "idle" | "adding" | "added" | "error";
 
-function JobCard({ job, userId }: { job: JobWithBadges; userId: string | null }) {
+function JobCard({
+  job,
+  userId,
+  profile,
+}: {
+  job: JobWithBadges;
+  userId: string | null;
+  profile: UserProfile | null;
+}) {
   const [addState, setAddState] = useState<AddToKanbanState>("idle");
   const [addError, setAddError] = useState<string | null>(null);
 
@@ -271,6 +297,8 @@ function JobCard({ job, userId }: { job: JobWithBadges; userId: string | null })
           </ul>
         </div>
       )}
+
+      <MatchDiagnosis job={job} profile={profile} userId={userId} />
 
       <div className="flex items-center justify-between gap-3">
         <a

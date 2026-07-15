@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { getSessionUser, logOut } from "@/lib/authStore";
 
 export function SiteHeader() {
@@ -36,13 +37,33 @@ export function SiteHeader() {
 
   return (
     <header className="border-b border-zinc-200 dark:border-zinc-800">
-      <div className="mx-auto flex h-14 w-full max-w-3xl items-center justify-between px-4">
-        <Link
-          href="/"
-          className="text-sm font-semibold text-zinc-900 dark:text-zinc-50"
-        >
-          신입 구직자 대시보드
-        </Link>
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-2 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <Link
+            href="/"
+            className="text-sm font-semibold text-zinc-900 dark:text-zinc-50"
+          >
+            신입 구직자 대시보드
+          </Link>
+          {checked && isLoggedIn ? (
+            <Button variant="outline" size="sm" onClick={handleLogOut}>
+              로그아웃
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link href="/login">
+                <Button variant="outline" size="sm">
+                  로그인
+                </Button>
+              </Link>
+              <Link href="/signup">
+                <Button variant="primary" size="sm">
+                  회원가입
+                </Button>
+              </Link>
+            </div>
+          )}
+        </div>
         <nav className="flex items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400">
           <Link href="/dashboard" className="hover:text-zinc-900 dark:hover:text-zinc-100">
             대시보드
@@ -53,24 +74,6 @@ export function SiteHeader() {
           <Link href="/profile" className="hover:text-zinc-900 dark:hover:text-zinc-100">
             마이페이지
           </Link>
-          {checked && isLoggedIn ? (
-            <button
-              type="button"
-              onClick={handleLogOut}
-              className="hover:text-zinc-900 dark:hover:text-zinc-100"
-            >
-              로그아웃
-            </button>
-          ) : (
-            <>
-              <Link href="/login" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-                로그인
-              </Link>
-              <Link href="/signup" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-                회원가입
-              </Link>
-            </>
-          )}
         </nav>
       </div>
     </header>
