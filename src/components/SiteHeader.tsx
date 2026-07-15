@@ -47,6 +47,9 @@ export function SiteHeader() {
           <Link href="/dashboard" className="hover:text-zinc-900 dark:hover:text-zinc-100">
             대시보드
           </Link>
+          <Link href="/applications" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+            지원 현황
+          </Link>
           <Link href="/profile" className="hover:text-zinc-900 dark:hover:text-zinc-100">
             마이페이지
           </Link>

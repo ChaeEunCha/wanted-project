@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { addApplication } from "@/lib/applicationsStore";
+import { getSessionUser } from "@/lib/authStore";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
@@ -27,6 +29,19 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getSessionUser()
+      .then((sessionUser) => {
+        if (!cancelled) setUserId(sessionUser?.id ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -176,7 +191,7 @@ export default function DashboardPage() {
 
       <div className="flex flex-col gap-4">
         {jobs.map((job) => (
-          <JobCard key={job.id} job={job} />
+          <JobCard key={job.id} job={job} userId={userId} />
         ))}
       </div>
 
@@ -194,7 +209,28 @@ export default function DashboardPage() {
   );
 }
 
-function JobCard({ job }: { job: JobWithBadges }) {
+type AddToKanbanState = "idle" | "adding" | "added" | "error";
+
+function JobCard({ job, userId }: { job: JobWithBadges; userId: string | null }) {
+  const [addState, setAddState] = useState<AddToKanbanState>("idle");
+  const [addError, setAddError] = useState<string | null>(null);
+
+  async function handleAddToKanban() {
+    if (!userId) {
+      window.location.href = "/login";
+      return;
+    }
+    setAddState("adding");
+    setAddError(null);
+    const result = await addApplication(userId, job);
+    if (result.ok) {
+      setAddState("added");
+    } else {
+      setAddState("error");
+      setAddError(result.error);
+    }
+  }
+
   return (
     <Card className="flex flex-col gap-3">
       <div className="flex items-start justify-between gap-4">
@@ -236,14 +272,27 @@ function JobCard({ job }: { job: JobWithBadges }) {
         </div>
       )}
 
-      <a
-        href={job.url}
-        target="_blank"
-        rel="noreferrer"
-        className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
-      >
-        원티드에서 공고 보기 →
-      </a>
+      <div className="flex items-center justify-between gap-3">
+        <a
+          href={job.url}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+        >
+          원티드에서 공고 보기 →
+        </a>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={addState === "adding" || addState === "added"}
+          onClick={handleAddToKanban}
+        >
+          {addState === "added" ? "담았어요" : addState === "adding" ? "담는 중..." : "칸반보드에 담기"}
+        </Button>
+      </div>
+      {addState === "error" && addError && (
+        <p className="text-xs text-red-500">{addError}</p>
+      )}
     </Card>
   );
 }

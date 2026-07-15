@@ -45,6 +45,7 @@ async function mergeBatch(jobs: JobListItem[]): Promise<JobWithBadges[]> {
         otherLines,
         preferredPoints: detail.detail?.preferred_points,
         benefits: detail.detail?.benefits,
+        skill_tags: detail.skill_tags,
       } satisfies JobWithBadges,
     ];
   });
