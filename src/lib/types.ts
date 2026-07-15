@@ -110,6 +110,20 @@ export interface JobDetail {
   hire_rounds?: string;
 }
 
+/** 위도/경도 좌표 (`AddressResponseSerializer.geo_location.location`) */
+export interface GeoLocation {
+  lat: number;
+  lng: number;
+}
+
+/** `GET /jobs/{job_id}` 상세 응답의 주소 (`AddressResponseSerializer`, 목록과 달리 `geo_location` 포함) */
+export interface JobDetailAddress {
+  country?: string;
+  location?: string;
+  full_location?: string;
+  geo_location?: { location: GeoLocation };
+}
+
 /** `GET /jobs/{job_id}` 상세 응답 (openapi__apis__v1__jobs__serializers__JobResponseSerializer 중 이 기능에 필요한 필드) */
 export interface JobDetailResponse {
   id: number;
@@ -120,6 +134,7 @@ export interface JobDetailResponse {
   detail?: JobDetail;
   category_tags?: JobCategoryTags;
   skill_tags?: JobTag[];
+  address?: JobDetailAddress;
   url: string;
 }
 
@@ -154,4 +169,41 @@ export interface JobWithBadges {
   otherLines: string[];
   preferredPoints?: string;
   benefits?: string;
+  /** P5 지도 위젯용 좌표. 상세 응답에 geo_location이 없는 공고는 undefined(지도에서 제외). */
+  geoLocation?: GeoLocation;
+  /** 칸반보드(P3)에 추가할 때 스킬태그 스냅샷으로 쓰인다 (PRD 5-5) */
+  skill_tags?: JobTag[];
+}
+
+/** 지원 여정 칸반보드 4단계 (PRD 5-5, DB.md 3.6) */
+export type ApplicationStatus = "interested" | "preparing" | "applied" | "waiting";
+
+export const APPLICATION_STATUSES: ApplicationStatus[] = [
+  "interested",
+  "preparing",
+  "applied",
+  "waiting",
+];
+
+export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
+  interested: "관심",
+  preparing: "준비중",
+  applied: "지원함",
+  waiting: "결과대기",
+};
+
+/**
+ * `applications` 테이블(DB.md 3.6) 한 행 — 추가 시점의 회사명/마감일/스킬태그를
+ * 스냅샷으로 복사 저장한다. 원본 공고가 이후 마감/삭제돼도 카드 내용은 유지된다.
+ */
+export interface Application {
+  id: string;
+  jobId: number;
+  status: ApplicationStatus;
+  companyName: string;
+  dueTime?: string;
+  skillTags: JobTag[];
+  jobUrl: string;
+  createdAt: string;
+  updatedAt: string;
 }

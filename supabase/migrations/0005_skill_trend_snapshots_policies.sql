@@ -1,5 +1,7 @@
--- 0002_skill_trend_snapshots_policies.sql
+-- 0005_skill_trend_snapshots_policies.sql
 -- 근거: DB.md 4.2절 / PRD.md 5-8절 (P6 신입 채용 트렌드 인사이트)
+-- (0002 → 0005로 재번호: 0002_applications.sql과 번호가 겹쳤고, 테이블을 만드는
+-- 0004_skill_trend_snapshots.sql보다 뒤에 적용돼야 하기 때문 — 병합 중 정리)
 --
 -- skill_trend_snapshots는 사용자별 데이터가 아니라 배치 집계 결과를 캐싱하는
 -- 전역 테이블이라 다른 테이블처럼 auth.uid() 기준 소유자 정책을 적용할 수 없다.
@@ -22,6 +24,3 @@ create policy "skill_trend_snapshots_insert_all"
 create policy "skill_trend_snapshots_delete_all"
   on public.skill_trend_snapshots for delete
   using (true);
-
-create index if not exists skill_trend_snapshots_lookup_idx
-  on public.skill_trend_snapshots (aggregated_at, category_tag_id, rank);

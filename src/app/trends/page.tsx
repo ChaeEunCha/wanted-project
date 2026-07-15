@@ -59,6 +59,7 @@ export default function TrendsPage() {
 
   useEffect(() => {
     let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 필터(직군) 변경 시 새 요청 시작을 알리는 동기 상태 동기화
     setLoading(true);
     setError(null);
     const query = selectedCategoryId ? `?category_tags=${selectedCategoryId}` : "";
