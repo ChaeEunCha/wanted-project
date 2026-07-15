@@ -1,6 +1,8 @@
 import type {
   CategoryTag,
+  CompanyInsight,
   JobCategoryTags,
+  JobDetailCompany,
   JobDetailResponse,
   JobListItem,
   JobTag,
@@ -102,6 +104,17 @@ interface WireJobDetail {
   hire_rounds?: string;
 }
 
+interface WireJobDetailCompany {
+  id: number;
+  name: string;
+  registration_number?: string;
+}
+
+function normalizeJobDetailCompany(raw?: WireJobDetailCompany): JobDetailCompany | undefined {
+  if (!raw) return undefined;
+  return { id: raw.id, name: raw.name, registrationNumber: raw.registration_number };
+}
+
 interface WireJobDetailResponse {
   id: number;
   status: string;
@@ -111,6 +124,7 @@ interface WireJobDetailResponse {
   detail?: WireJobDetail;
   category_tags?: WireCategoryTags;
   skill_tags?: WireTag[];
+  company?: WireJobDetailCompany;
   address?: {
     country?: string;
     location?: string;
@@ -140,6 +154,7 @@ function normalizeJobDetailResponse(raw: WireJobDetailResponse): JobDetailRespon
       : undefined,
     category_tags: normalizeCategoryTags(raw.category_tags),
     skill_tags: raw.skill_tags?.map(normalizeTag),
+    company: normalizeJobDetailCompany(raw.company),
     // 목록(JobListAddressResponseSerializer)과 달리 상세 응답의 주소에는 geo_location이 실려 온다
     // (P5 마감임박 지도 위젯이 여기서 좌표를 얻는다 — PRD 5-7절).
     address: raw.address
@@ -200,4 +215,56 @@ export async function fetchCategoryTags(): Promise<CategoryTag[]> {
     "/tags/categories"
   );
   return data.tags ?? data.data ?? [];
+}
+
+// openapi.json의 InsightCompanyDetailResponseSerializer는 스키마 `properties`(camelCase)와
+// `example`(snake_case)이 서로 모순돼 실제 응답 표기를 문서만으로 확정할 수 없다 — 두 표기를 모두 허용한다.
+interface WireCompanyInsight {
+  averageSalary?: number;
+  average_salary?: number;
+  hiredSalary?: string | number;
+  hired_salary?: string | number;
+  employeeCountNPS?: number;
+  employee_count_nps?: number;
+  employeeCountEI?: number;
+  employee_count_ei?: number;
+  hireRate?: number;
+  hire_rate?: number;
+  leftRate?: number;
+  left_rate?: number;
+}
+
+function normalizeCompanyInsight(raw: WireCompanyInsight): CompanyInsight {
+  // hiredSalary는 스키마 타입이 string(예: "31565052.9")이라 표시용 number로 변환한다.
+  const hiredSalaryRaw = raw.hiredSalary ?? raw.hired_salary;
+  const parsedHiredSalary =
+    hiredSalaryRaw !== undefined ? Number.parseFloat(String(hiredSalaryRaw)) : undefined;
+
+  return {
+    averageSalary: raw.averageSalary ?? raw.average_salary,
+    hiredSalary: Number.isFinite(parsedHiredSalary) ? parsedHiredSalary : undefined,
+    employeeCountNPS: raw.employeeCountNPS ?? raw.employee_count_nps,
+    employeeCountEI: raw.employeeCountEI ?? raw.employee_count_ei,
+    hireRate: raw.hireRate ?? raw.hire_rate,
+    leftRate: raw.leftRate ?? raw.left_rate,
+  };
+}
+
+export async function fetchCompanyInsight(bizNumber: string): Promise<CompanyInsight | null> {
+  // 이 함수의 계약은 "인사이트 아니면 null"이다 — 401/503 등 비2xx는 물론 네트워크 예외까지
+  // 전부 null로 흡수한다. 호출부(라우트 핸들러)가 null을 hasRegistrationNumber와 조합해
+  // "재무 정보 준비중" 폴백으로 해석한다 (503만 명시한 PRD AC와 달리, 이 계정은 401도
+  // 상시 발생해 원인 불문 동일하게 처리하기로 결정했다).
+  try {
+    const searchParams = new URLSearchParams({ biz_number: bizNumber });
+    const response = await fetch(`${WANTED_API_BASE_URL}/insight/company?${searchParams.toString()}`, {
+      headers: getAuthHeaders(),
+      cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const raw = (await response.json()) as WireCompanyInsight;
+    return normalizeCompanyInsight(raw);
+  } catch {
+    return null;
+  }
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { addApplication } from "@/lib/applicationsStore";
 import { getSessionUser } from "@/lib/authStore";
@@ -415,15 +416,23 @@ function JobCard({
 
       <MatchDiagnosis job={job} profile={profile} userId={userId} />
 
-      <div className="flex items-center justify-between gap-3">
-        <a
-          href={job.url}
-          target="_blank"
-          rel="noreferrer"
-          className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
-        >
-          원티드에서 공고 보기 →
-        </a>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-4">
+          <Link
+            href={`/dashboard/${job.id}`}
+            className="text-sm font-medium text-violet-60 hover:underline dark:text-violet-30"
+          >
+            회사 정보 보기 →
+          </Link>
+          <a
+            href={job.url}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+          >
+            원티드에서 공고 보기 →
+          </a>
+        </div>
         <Button
           variant="outline"
           size="sm"

@@ -110,6 +110,15 @@ export interface JobDetail {
   hire_rounds?: string;
 }
 
+/**
+ * `GET /jobs/{job_id}` 상세 응답의 회사 정보 중 이 기능(P1 회사 정보)에 필요한 필드
+ * (openapi.json: JobCompanyResponseSerializer).
+ */
+export interface JobDetailCompany extends JobCompanySummary {
+  /** wire 필드명 `registration_number` — `/insight/company?biz_number=` 체이닝 키 (PRD 5-3) */
+  registrationNumber?: string;
+}
+
 /** 위도/경도 좌표 (`AddressResponseSerializer.geo_location.location`) */
 export interface GeoLocation {
   lat: number;
@@ -134,8 +143,26 @@ export interface JobDetailResponse {
   detail?: JobDetail;
   category_tags?: JobCategoryTags;
   skill_tags?: JobTag[];
+  company?: JobDetailCompany;
   address?: JobDetailAddress;
   url: string;
+}
+
+/**
+ * `/insight/company?biz_number=` 응답 중 이 기능(P1 회사 정보)에 필요한 필드
+ * (openapi.json: InsightCompanyDetailResponseSerializer).
+ * ⚠️ openapi.json 문서 자체가 내부적으로 모순된다 — `properties`는 camelCase
+ * (`averageSalary` 등)인데 스키마의 `example`은 snake_case(`average_salary` 등)를 쓴다.
+ * 실제 라이브 응답 표기를 스펙만으로 확정할 수 없어 client.ts에서 두 표기를 모두 인식한다.
+ */
+export interface CompanyInsight {
+  averageSalary?: number;
+  /** 문서상 타입은 string(예: "31565052.9") — 표시용으로 parseFloat해 number로 보관 */
+  hiredSalary?: number;
+  employeeCountNPS?: number;
+  employeeCountEI?: number;
+  hireRate?: number;
+  leftRate?: number;
 }
 
 /** PRD 5-1절 자격요건 뱃지 카테고리 */
@@ -206,4 +233,29 @@ export interface Application {
   jobUrl: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * 공고 상세 페이지(PRD 5-3 "회사 정보(연봉/복지)")에서 렌더링하는 DTO.
+ * `/api/jobs/[id]` Route Handler가 공고 상세 + 회사 인사이트 응답을 병합해 만들어 준다.
+ */
+export interface JobDetailWithInsight {
+  id: number;
+  position: string;
+  company: JobCompanySummary;
+  url: string;
+  due_time?: string;
+  annual_from?: number;
+  annual_to?: number;
+  isTrulyEntryLevel: boolean;
+  entryLevelSupportingText: string;
+  qualificationBadges: QualificationBadge[];
+  otherLines: string[];
+  benefits?: string;
+  /** registration_number 부재(연봉 섹션 자체 숨김)와 insight 조회 실패(폴백 문구)를 구분하기 위한 플래그 (PRD 5-3 AC) */
+  hasRegistrationNumber: boolean;
+  /** insight 호출이 실패(401/503/네트워크 오류 등 비2xx 전부)하면 null — "회사 재무 정보 준비중" 폴백 트리거 */
+  companyInsight: CompanyInsight | null;
+  /** attraction_tags는 라이브 API 어디에도 존재하지 않음(직접 확인된 PRD-vs-API 갭) — 항상 빈 배열, 타입만 유지 */
+  attractionTags: JobTag[];
 }
