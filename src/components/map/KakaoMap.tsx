@@ -71,8 +71,8 @@ function popupContent(marker: MapMarkerData): string {
  * 카카오맵 JS SDK 래퍼 컴포넌트 (P5 마감임박 지도 위젯 기반).
  *
  * 마커 데이터는 부모가 `markers` prop으로 전달한다 — 이 컴포넌트는
- * 좌표/데이터 출처(실제 Wanted API 상세 조회 vs 목업)를 알지 못하고
- * 렌더링만 담당한다 (P0 필터 결과 연동 전까지는 목업 데이터로 미리보기).
+ * 좌표/데이터 출처를 알지 못하고 렌더링만 담당한다 (대시보드가 Wanted API
+ * 상세 조회로 얻은 실제 좌표를 넘겨준다).
  */
 export function KakaoMap({
   markers,

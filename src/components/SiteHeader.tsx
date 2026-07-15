@@ -17,9 +17,6 @@ export function SiteHeader() {
           <Link href="/profile" className="hover:text-zinc-900 dark:hover:text-zinc-100">
             마이페이지
           </Link>
-          <Link href="/map-preview" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-            지도(미리보기)
-          </Link>
           <Link href="/login" className="hover:text-zinc-900 dark:hover:text-zinc-100">
             로그인
           </Link>
