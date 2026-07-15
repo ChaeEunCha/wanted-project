@@ -3,19 +3,37 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { JobCardPreview } from "@/components/JobCardPreview";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
+import { DdayBadge } from "@/components/ui/DdayBadge";
 import { ProfileCompletionBanner } from "@/components/ui/ProfileCompletionBanner";
+import { listApplications } from "@/lib/applicationsStore";
 import { getProfile, getSessionUser } from "@/lib/authStore";
-import type { JobWithBadges, UserProfile } from "@/lib/types";
+import {
+  APPLICATION_STATUSES,
+  APPLICATION_STATUS_LABELS,
+  type Application,
+  type JobWithBadges,
+  type UserProfile,
+} from "@/lib/types";
 
 const DASHBOARD_PREVIEW_LIMIT = 4;
+const DEADLINE_SOON_DAYS = 3;
+const TREND_PREVIEW_LIMIT = 3;
+const SKILL_TAG_NUDGE_THRESHOLD = 3;
 
 type HomeState =
   | { kind: "loading" }
   | { kind: "guest" }
   | { kind: "incomplete"; profile: UserProfile }
-  | { kind: "complete"; email: string | null; profile: UserProfile };
+  | { kind: "complete"; userId: string; email: string | null; profile: UserProfile };
+
+function isDueWithinDays(dueTime: string | undefined, days: number): boolean {
+  if (!dueTime) return false;
+  const diffDays = Math.round((new Date(dueTime).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  return diffDays >= 0 && diffDays <= days;
+}
 
 function isProfileComplete(profile: UserProfile): boolean {
   return (
@@ -47,7 +65,7 @@ export default function Home() {
         if (cancelled) return;
 
         if (isProfileComplete(profile)) {
-          setState({ kind: "complete", email: sessionUser.email, profile });
+          setState({ kind: "complete", userId: sessionUser.id, email: sessionUser.email, profile });
         } else {
           setState({ kind: "incomplete", profile });
         }
@@ -81,7 +99,7 @@ export default function Home() {
   }
 
   if (state.kind === "complete") {
-    return <DashboardHome email={state.email} />;
+    return <DashboardHome userId={state.userId} email={state.email} profile={state.profile} />;
   }
 
   return <GuestHome />;
@@ -200,7 +218,15 @@ function PainPointItem({
   );
 }
 
-function DashboardHome({ email }: { email: string | null }) {
+function DashboardHome({
+  userId,
+  email,
+  profile,
+}: {
+  userId: string;
+  email: string | null;
+  profile: UserProfile;
+}) {
   const [jobs, setJobs] = useState<JobWithBadges[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -283,6 +309,200 @@ function DashboardHome({ email }: { email: string | null }) {
           </div>
         )}
       </div>
+
+      <ApplicationsSummarySection userId={userId} />
+      <DeadlineSoonSection />
+      <TrendsSummarySection />
+      <ProfileNudgeSection profile={profile} />
     </div>
+  );
+}
+
+/** ② 지원 현황 요약 — 칸반보드(P3) 4단계별 건수 + 마감 임박 건 강조 (PRD 5-9) */
+function ApplicationsSummarySection({ userId }: { userId: string }) {
+  const [applications, setApplications] = useState<Application[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    listApplications(userId).then((result) => {
+      if (!cancelled) setApplications(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  // 소스 기능(P3)에서 아직 데이터가 없으면(로딩 포함) 빈 섹션을 노출하지 않는다.
+  if (!applications || applications.length === 0) return null;
+
+  const dueSoon = applications.filter((application) => isDueWithinDays(application.dueTime, DEADLINE_SOON_DAYS));
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
+          🗂️ 지원 현황 요약
+        </h2>
+        <Link
+          href="/applications"
+          className="text-sm font-semibold text-violet-60 hover:text-violet-70"
+        >
+          칸반보드 보기 →
+        </Link>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {APPLICATION_STATUSES.map((status) => (
+          <Card key={status} className="flex flex-col items-center gap-1 p-4 text-center">
+            <span className="text-2xl font-bold text-violet-60">
+              {applications.filter((application) => application.status === status).length}
+            </span>
+            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+              {APPLICATION_STATUS_LABELS[status]}
+            </span>
+          </Card>
+        ))}
+      </div>
+
+      {dueSoon.length > 0 && (
+        <p className="mt-3 text-sm text-red-500">
+          마감 임박 {dueSoon.length}건이 있어요 — 지원 현황에서 확인해보세요.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** ③ 마감임박 알림 — D-3 이내 공고 리스트 (지도 위젯 P5의 리스트 뷰 축약판, PRD 5-9) */
+function DeadlineSoonSection() {
+  const [jobs, setJobs] = useState<JobWithBadges[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/jobs?limit=20`)
+      .then((res) => {
+        if (!res.ok) throw new Error("failed");
+        return res.json();
+      })
+      .then((data) => {
+        if (cancelled) return;
+        const upcoming = ((data.jobs ?? []) as JobWithBadges[])
+          .filter((job) => isDueWithinDays(job.due_time, DEADLINE_SOON_DAYS))
+          .sort((a, b) => new Date(a.due_time!).getTime() - new Date(b.due_time!).getTime());
+        setJobs(upcoming);
+      })
+      .catch(() => {
+        if (!cancelled) setJobs([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!jobs || jobs.length === 0) return null;
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
+          ⏰ 마감임박 알림
+        </h2>
+        <Link
+          href="/dashboard"
+          className="text-sm font-semibold text-violet-60 hover:text-violet-70"
+        >
+          지도에서 보기 →
+        </Link>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-2.5">
+        {jobs.slice(0, 5).map((job) => (
+          <Card key={job.id} className="flex items-center justify-between gap-3 p-4">
+            <div>
+              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                {job.position}
+              </p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">{job.company.name}</p>
+            </div>
+            <DdayBadge dueDate={job.due_time!} className="shrink-0" />
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface TrendSkillPreview {
+  skill_tag_id: number;
+  skill_tag_title: string;
+  count: number;
+}
+
+/** ④ 트렌드 인사이트 요약 — 신입 공고 TOP3 스킬 축약 노출 (PRD 5-9, P6 연동) */
+function TrendsSummarySection() {
+  const [skills, setSkills] = useState<TrendSkillPreview[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/trends/skills")
+      .then((res) => {
+        if (!res.ok) throw new Error("failed");
+        return res.json();
+      })
+      .then((data) => {
+        if (!cancelled) setSkills((data.skills ?? []).slice(0, TREND_PREVIEW_LIMIT));
+      })
+      .catch(() => {
+        if (!cancelled) setSkills([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!skills || skills.length === 0) return null;
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between">
+        <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">
+          📈 신입 채용 트렌드
+        </h2>
+        <Link
+          href="/trends"
+          className="text-sm font-semibold text-violet-60 hover:text-violet-70"
+        >
+          더보기 →
+        </Link>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {skills.map((skill, index) => (
+          <Badge key={skill.skill_tag_id} tone="violet">
+            TOP{index + 1} {skill.skill_tag_title}
+          </Badge>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** ⑤ 프로필 완성도 넛지 — 스킬 태그 등록이 적으면 매칭(P4) 정확도를 위해 보완 유도 (PRD 5-9) */
+function ProfileNudgeSection({ profile }: { profile: UserProfile }) {
+  if (profile.skillTags.length >= SKILL_TAG_NUDGE_THRESHOLD) return null;
+
+  return (
+    <Card className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <CardTitle>스킬 태그를 더 등록해보세요</CardTitle>
+        <CardDescription>
+          현재 {profile.skillTags.length}개 등록돼 있어요. 스킬 태그가 많을수록 JD
+          매칭 진단이 더 정확해져요.
+        </CardDescription>
+      </div>
+      <Link href="/profile" className="shrink-0">
+        <Button variant="outline">프로필 보완하기</Button>
+      </Link>
+    </Card>
   );
 }
