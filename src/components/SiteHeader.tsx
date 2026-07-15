@@ -74,6 +74,9 @@ export function SiteHeader() {
           <Link href="/trends" className="hover:text-zinc-900 dark:hover:text-zinc-100">
             트렌드
           </Link>
+          <Link href="/skills-demo" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+            용어 사전
+          </Link>
           <Link href="/profile" className="hover:text-zinc-900 dark:hover:text-zinc-100">
             마이페이지
           </Link>
