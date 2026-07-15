@@ -37,13 +37,13 @@ export function SiteHeader() {
 
   return (
     <header className="border-b border-zinc-200 dark:border-zinc-800">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-2 px-4 py-3">
+      <div className="mx-auto flex w-full flex-col gap-2 px-4 py-3 sm:px-6 lg:px-10">
         <div className="flex items-center justify-between">
           <Link
             href="/"
-            className="text-sm font-semibold text-zinc-900 dark:text-zinc-50"
+            className="text-xl font-bold text-zinc-900 dark:text-zinc-50"
           >
-            신입 구직자 대시보드
+            NEEDED
           </Link>
           {checked && isLoggedIn ? (
             <Button variant="outline" size="sm" onClick={handleLogOut}>

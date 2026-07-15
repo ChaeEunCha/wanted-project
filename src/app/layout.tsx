@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "신입 구직자 대시보드",
+  title: "NEEDED",
   description: "원티드 API 기반 신입 구직자 대시보드",
 };
 
