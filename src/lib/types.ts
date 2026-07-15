@@ -3,9 +3,10 @@
  *
  * - Wanted API 관련 타입(SkillTag, CategoryTag)은 openapi.json의
  *   ParentTagResponseSerializer / TagResponseSerializer 필드명을 그대로 따른다.
- * - User/Profile/Portfolio는 PRD.md 5-2절의 자체 DB 데이터 모델(users, profiles,
- *   profile_category_tags, profile_skill_tags, portfolios)을 프론트엔드 관점으로 옮긴 것으로,
- *   실제로는 백엔드 API 응답 타입으로 교체되어야 한다.
+ * - Profile/Portfolio는 DB.md 3.2~3.5절의 자체 DB 데이터 모델(profiles,
+ *   profile_category_tags, profile_skill_tags, portfolios)을 프론트엔드 관점으로 옮긴 것이다.
+ *   계정(회원가입/로그인)은 커스텀 users 테이블 대신 Supabase Auth(`auth.users`)를 사용하므로
+ *   별도의 User 타입 없이 src/lib/authStore.ts의 SessionUser({ id, email })를 사용한다.
  */
 
 /** 원티드 API `/tags/skills` 응답 항목 (`{id, title}`) */
@@ -55,4 +56,102 @@ export interface UserProfile {
 export interface MockUser {
   email: string;
   createdAt: string;
+}
+
+/** `/jobs`(목록) 응답의 회사 정보 (`JobCompanyResponseSerializer` 중 목록에 필요한 부분만) */
+export interface JobCompanySummary {
+  id: number;
+  name: string;
+}
+
+/** `/jobs`(목록) 응답의 주소 (`JobListAddressResponseSerializer`, `geo_location` 없음) */
+export interface JobListAddress {
+  country?: string;
+  location?: string;
+  full_location?: string;
+}
+
+/** `/jobs`(목록) 응답의 직군/직무 태그 (`CategoryTagResponseSerializer`) */
+export interface JobCategoryTags {
+  parent_tag?: JobTag;
+  child_tags?: JobTag[];
+}
+
+/**
+ * 공고 상세/목록 응답의 태그 항목 (`{id, text}`).
+ * 프로필의 `SkillTag`(`{id, title}`)와 필드명이 달라 별도 타입으로 분리한다
+ * (openapi.json: openapi__apis__v1__jobs__serializers__TagResponseSerializer).
+ */
+export interface JobTag {
+  id: number;
+  text: string;
+}
+
+/** `GET /jobs` 목록 응답 항목 (`JobListDetailResponseSerializer`) */
+export interface JobListItem {
+  id: number;
+  status: string;
+  due_time?: string;
+  position: string;
+  company: JobCompanySummary;
+  address?: JobListAddress;
+  category_tags?: JobCategoryTags;
+  url: string;
+}
+
+/** `GET /jobs/{job_id}` 상세 응답의 `detail` 필드 (`JobDetailResponseSerializer`) */
+export interface JobDetail {
+  position?: string;
+  intro?: string;
+  main_tasks?: string;
+  requirements?: string;
+  preferred_points?: string;
+  benefits?: string;
+  hire_rounds?: string;
+}
+
+/** `GET /jobs/{job_id}` 상세 응답 (openapi__apis__v1__jobs__serializers__JobResponseSerializer 중 이 기능에 필요한 필드) */
+export interface JobDetailResponse {
+  id: number;
+  status: string;
+  due_time?: string;
+  annual_from?: number;
+  annual_to?: number;
+  detail?: JobDetail;
+  category_tags?: JobCategoryTags;
+  skill_tags?: JobTag[];
+  url: string;
+}
+
+/** PRD 5-1절 자격요건 뱃지 카테고리 */
+export type QualificationBadgeCategory = "major" | "enrollment" | "portfolio" | "tool";
+
+export interface QualificationBadge {
+  category: QualificationBadgeCategory;
+  label: string;
+}
+
+/**
+ * 대시보드에서 렌더링하는, 목록 + 상세 + 뱃지 추출 결과를 합친 DTO.
+ * `/api/jobs` Route Handler가 목록/상세 응답을 병합해 만들어 준다.
+ */
+export interface JobWithBadges {
+  id: number;
+  position: string;
+  company: JobCompanySummary;
+  url: string;
+  due_time?: string;
+  address?: JobListAddress;
+  category_tags?: JobCategoryTags;
+  annual_from?: number;
+  annual_to?: number;
+  /** annual_from이 0(또는 미기재)이면 true — "진짜 신입 가능" */
+  isTrulyEntryLevel: boolean;
+  /** 예: "0년 이상", "0~3년" */
+  entryLevelSupportingText: string;
+  qualificationBadges: QualificationBadge[];
+  /** 카테고리 규칙에 매칭되지 않은 requirements 줄 ("기타 자격요건") */
+  otherLines: string[];
+  preferredPoints?: string;
+  benefits?: string;
 }

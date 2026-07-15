@@ -9,7 +9,7 @@ import { CareerYearsSelect } from "@/components/profile/CareerYearsSelect";
 import { CategoryTagPicker } from "@/components/profile/CategoryTagPicker";
 import { PortfolioField } from "@/components/profile/PortfolioField";
 import { SkillTagPicker } from "@/components/profile/SkillTagPicker";
-import { getProfile, getSessionEmail, saveProfile } from "@/lib/authStore";
+import { getProfile, getSessionUser, saveProfile } from "@/lib/authStore";
 import type { UserProfile } from "@/lib/types";
 
 const EMPTY_PROFILE: UserProfile = {
@@ -21,10 +21,9 @@ const EMPTY_PROFILE: UserProfile = {
 
 /**
  * P0 프로필/포트폴리오 화면 (마이페이지 겸용, PRD.md 5-2절).
- * TODO(백엔드 연동): 실제로는 로그인 세션을 서버에서 검증하고,
- * 프로필 조회/저장도 서버 API(GET/PUT /api/profile 등)를 통해
- * profiles/profile_category_tags/profile_skill_tags/portfolios 테이블에 반영해야 한다.
- * 여기서는 src/lib/authStore.ts의 localStorage mock으로 대체한다.
+ * 로그인 세션은 Supabase Auth 세션(`supabase.auth.getSession`)으로 확인하고,
+ * 프로필 조회/저장은 profiles/profile_category_tags/profile_skill_tags/portfolios 테이블에
+ * 직접 반영한다 — src/lib/authStore.ts 참고.
  */
 export default function ProfilePage() {
   const router = useRouter();
@@ -32,34 +31,49 @@ export default function ProfilePage() {
   const [errors, setErrors] = useState<{
     careerYears?: string | null;
     portfolios?: string | null;
+    form?: string | null;
   }>({});
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [session, setSession] = useState<{
     checked: boolean;
+    userId: string | null;
     email: string | null;
     isWelcome: boolean;
     profile: UserProfile;
-  }>({ checked: false, email: null, isWelcome: false, profile: EMPTY_PROFILE });
+  }>({ checked: false, userId: null, email: null, isWelcome: false, profile: EMPTY_PROFILE });
 
   useEffect(() => {
-    // 브라우저 localStorage(외부 저장소)에서 세션/프로필을 읽어와야 하므로
-    // 클라이언트 마운트 이후에만 접근 가능하다 (SSR 시점엔 window/localStorage가 없음).
-    // 이 값들은 서버에서 미리 알 수 없어 렌더 중 계산으로 옮길 수 없다.
-    const sessionEmail = getSessionEmail();
-    if (!sessionEmail) {
-      router.replace("/login");
-      return;
+    // Supabase 세션/프로필 조회는 비동기 네트워크 호출이라 클라이언트 마운트 이후에만 가능하다
+    // (SSR 시점엔 브라우저 세션에 접근할 수 없음). 이 값들은 서버에서 미리 알 수 없어
+    // 렌더 중 계산으로 옮길 수 없다.
+    let cancelled = false;
+
+    async function load() {
+      const sessionUser = await getSessionUser();
+      if (cancelled) return;
+      if (!sessionUser) {
+        router.replace("/login");
+        return;
+      }
+      const profile = await getProfile(sessionUser.id);
+      if (cancelled) return;
+      setSession({
+        checked: true,
+        userId: sessionUser.id,
+        email: sessionUser.email,
+        isWelcome: new URLSearchParams(window.location.search).get("welcome") === "1",
+        profile,
+      });
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage 세션 로드는 마운트 시 1회만 필요한 외부 저장소 동기화
-    setSession({
-      checked: true,
-      email: sessionEmail,
-      isWelcome: new URLSearchParams(window.location.search).get("welcome") === "1",
-      profile: getProfile(sessionEmail),
-    });
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
-  const { checked: checkedSession, email, profile, isWelcome } = session;
+  const { checked: checkedSession, userId, email, profile, isWelcome } = session;
   const setProfile = (
     updater: UserProfile | ((prev: UserProfile) => UserProfile)
   ) =>
@@ -68,7 +82,7 @@ export default function ProfilePage() {
       profile: typeof updater === "function" ? updater(prev.profile) : updater,
     }));
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const newErrors: typeof errors = {};
     if (profile.careerYears === null) {
       newErrors.careerYears = "경력을 선택해 주세요.";
@@ -82,9 +96,16 @@ export default function ProfilePage() {
 
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
-    if (!email) return;
+    if (!userId) return;
 
-    saveProfile(email, profile);
+    setSaving(true);
+    const result = await saveProfile(userId, profile);
+    setSaving(false);
+
+    if (!result.ok) {
+      setErrors({ form: result.error });
+      return;
+    }
     setSavedAt(new Date().toLocaleTimeString());
   }
 
@@ -149,9 +170,15 @@ export default function ProfilePage() {
           />
         </div>
 
+        {errors.form && (
+          <p className="text-sm text-red-500" role="alert">
+            {errors.form}
+          </p>
+        )}
+
         <div className="flex items-center gap-3">
-          <Button onClick={handleSubmit} className="w-full sm:w-auto">
-            저장하기
+          <Button onClick={handleSubmit} disabled={saving} className="w-full sm:w-auto">
+            {saving ? "저장 중..." : "저장하기"}
           </Button>
           {savedAt && (
             <span className="text-sm text-emerald-600 dark:text-emerald-400">

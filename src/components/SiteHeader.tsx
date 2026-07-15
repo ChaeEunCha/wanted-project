@@ -11,6 +11,9 @@ export function SiteHeader() {
           신입 구직자 대시보드
         </Link>
         <nav className="flex gap-4 text-sm text-zinc-500 dark:text-zinc-400">
+          <Link href="/dashboard" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+            대시보드
+          </Link>
           <Link href="/profile" className="hover:text-zinc-900 dark:hover:text-zinc-100">
             마이페이지
           </Link>
