@@ -4,7 +4,29 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
+import { KakaoMap } from "@/components/map/KakaoMap";
+import type { MapMarkerData } from "@/components/map/types";
 import type { CategoryTag, CategorySubTag, JobWithBadges } from "@/lib/types";
+
+// P5 마감임박 지도 위젯: 대시보드가 이미 필터링해 화면에 노출 중인 공고만 마커로 그린다
+// (PRD 5-7절 — 전체 공고를 별도로 다시 조회하지 않고 "화면에 노출되는 공고만" 좌표를 쓴다).
+// 지원한 곳/관심 등록 마커는 P3(지원 여정 칸반보드) 데이터가 아직 없어 이 대시보드에서는
+// 마감임박(deadline) 마커만 그린다 — P3 연동 시 kind별 마커를 추가로 합칠 것.
+function jobToMarker(job: JobWithBadges): MapMarkerData | null {
+  if (!job.geoLocation) return null;
+  return {
+    id: job.id,
+    lat: job.geoLocation.lat,
+    lng: job.geoLocation.lng,
+    kind: "deadline",
+    companyName: job.company.name,
+    position: job.position,
+    dueDate: job.due_time,
+    skillTags: job.qualificationBadges
+      .filter((badge) => badge.category === "tool")
+      .map((badge) => badge.label),
+  };
+}
 
 // openapi.json의 `/jobs` `locations` 파라미터는 배열 문자열일 뿐 별도 enum이 없어
 // 자주 쓰이는 지역명을 큐레이션한 정적 목록으로 대체한다.
@@ -59,6 +81,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
 
   useEffect(() => {
     let cancelled = false;
@@ -204,13 +227,26 @@ export default function DashboardPage() {
         </p>
       )}
 
-      <div className="flex flex-col gap-4">
-        {jobs.map((job) => (
-          <JobCard key={job.id} job={job} />
-        ))}
-      </div>
+      {!loading && !error && jobs.length > 0 && (
+        <div className="flex gap-2">
+          <ToggleButton label="목록" selected={viewMode === "list"} onClick={() => setViewMode("list")} />
+          <ToggleButton label="지도" selected={viewMode === "map"} onClick={() => setViewMode("map")} />
+        </div>
+      )}
 
-      {hasNext && !loading && (
+      {viewMode === "map" && jobs.length > 0 && (
+        <KakaoMap markers={jobs.map(jobToMarker).filter((m) => m !== null)} />
+      )}
+
+      {viewMode === "list" && (
+        <div className="flex flex-col gap-4">
+          {jobs.map((job) => (
+            <JobCard key={job.id} job={job} />
+          ))}
+        </div>
+      )}
+
+      {hasNext && !loading && viewMode === "list" && (
         <Button
           variant="outline"
           onClick={loadMore}

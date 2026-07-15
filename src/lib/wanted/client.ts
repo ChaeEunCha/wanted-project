@@ -111,6 +111,12 @@ interface WireJobDetailResponse {
   detail?: WireJobDetail;
   category_tags?: WireCategoryTags;
   skill_tags?: WireTag[];
+  address?: {
+    country?: string;
+    location?: string;
+    full_location?: string;
+    geo_location?: { location?: { lat: number; lng: number } };
+  };
   url: string;
 }
 
@@ -134,6 +140,18 @@ function normalizeJobDetailResponse(raw: WireJobDetailResponse): JobDetailRespon
       : undefined,
     category_tags: normalizeCategoryTags(raw.category_tags),
     skill_tags: raw.skill_tags?.map(normalizeTag),
+    // 목록(JobListAddressResponseSerializer)과 달리 상세 응답의 주소에는 geo_location이 실려 온다
+    // (P5 마감임박 지도 위젯이 여기서 좌표를 얻는다 — PRD 5-7절).
+    address: raw.address
+      ? {
+          country: raw.address.country,
+          location: raw.address.location,
+          full_location: raw.address.full_location,
+          geo_location: raw.address.geo_location?.location
+            ? { location: raw.address.geo_location.location }
+            : undefined,
+        }
+      : undefined,
     url: raw.url,
   };
 }

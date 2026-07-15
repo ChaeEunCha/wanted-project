@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
           otherLines,
           preferredPoints: detail.detail?.preferred_points,
           benefits: detail.detail?.benefits,
+          geoLocation: detail.address?.geo_location?.location,
         } satisfies JobWithBadges,
       ];
     });
