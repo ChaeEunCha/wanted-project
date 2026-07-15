@@ -6,12 +6,51 @@ import { getSessionUser } from "@/lib/authStore";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
+import { KakaoMap } from "@/components/map/KakaoMap";
+import type { MapMarkerData } from "@/components/map/types";
 import { DdayBadge } from "@/components/ui/DdayBadge";
 import { EntryFriendlyBadge } from "@/components/ui/EntryFriendlyBadge";
 import { FilterChip } from "@/components/ui/FilterChip";
 import { MatchDiagnosis } from "@/components/ui/MatchDiagnosis";
 import type { CategoryTag, CategorySubTag, JobWithBadges, UserProfile } from "@/lib/types";
 import { getProfile } from "@/lib/authStore";
+
+// P5 마감임박 지도 위젯: 대시보드가 이미 필터링해 화면에 노출 중인 공고만 마커로 그린다
+// (PRD 5-7절 — 전체 공고를 별도로 다시 조회하지 않고 "화면에 노출되는 공고만" 좌표를 쓴다).
+// 지원한 곳/관심 등록 마커는 P3(지원 여정 칸반보드) 데이터가 아직 없어 이 대시보드에서는
+// 마감임박(deadline) 마커만 그린다 — P3 연동 시 kind별 마커를 추가로 합칠 것.
+function jobToMarker(job: JobWithBadges): MapMarkerData | null {
+  if (!job.geoLocation) return null;
+  return {
+    id: job.id,
+    lat: job.geoLocation.lat,
+    lng: job.geoLocation.lng,
+    kind: "deadline",
+    companyName: job.company.name,
+    position: job.position,
+    dueDate: job.due_time,
+    skillTags: job.qualificationBadges
+      .filter((badge) => badge.category === "tool")
+      .map((badge) => badge.label),
+  };
+}
+
+const EARTH_RADIUS_KM = 6371;
+const MIN_RADIUS_KM = 1;
+const MAX_RADIUS_KM = 30;
+const DEFAULT_RADIUS_KM = 10;
+
+/** 두 좌표 간 직선거리(km) — PRD 5-7 "통근 필터 v1 범위"(직선 반경만, 소요시간 필터는 v2) */
+function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const sinLat = Math.sin(dLat / 2);
+  const sinLng = Math.sin(dLng / 2);
+  const h =
+    sinLat * sinLat + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * sinLng * sinLng;
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(h));
+}
 
 // openapi.json의 `/jobs` `locations` 파라미터는 배열 문자열일 뿐 별도 enum이 없어
 // 자주 쓰이는 지역명을 큐레이션한 정적 목록으로 대체한다.
@@ -31,8 +70,29 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
   const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    if (viewMode !== "map" || userLocation || geoError) return;
+    if (!navigator.geolocation) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 지도 뷰 진입 시 위치 API 지원 여부를 즉시 알려줘야 한다
+      setGeoError("이 브라우저에서는 위치 정보를 사용할 수 없어요.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+      },
+      () => {
+        setGeoError("위치 권한을 허용하지 않아 반경 필터를 사용할 수 없어요. 전체 마커를 보여드려요.");
+      }
+    );
+  }, [viewMode, userLocation, geoError]);
 
   useEffect(() => {
     let cancelled = false;
@@ -207,13 +267,68 @@ export default function DashboardPage() {
         </p>
       )}
 
-      <div className="flex flex-col gap-4">
-        {jobs.map((job) => (
-          <JobCard key={job.id} job={job} userId={userId} profile={profile} />
-        ))}
-      </div>
+      {!loading && !error && jobs.length > 0 && (
+        <div className="flex gap-2">
+          <FilterChip label="목록" selected={viewMode === "list"} onClick={() => setViewMode("list")} />
+          <FilterChip label="지도" selected={viewMode === "map"} onClick={() => setViewMode("map")} />
+        </div>
+      )}
 
-      {hasNext && !loading && (
+      {viewMode === "map" && jobs.length > 0 && (() => {
+        const allMarkers = jobs.map(jobToMarker).filter((m) => m !== null);
+        const visibleMarkers = allMarkers.filter(
+          (m) => !userLocation || distanceKm(userLocation, m) <= radiusKm
+        );
+        const hiddenByRadius = userLocation ? allMarkers.length - visibleMarkers.length : 0;
+
+        return (
+          <div className="flex flex-col gap-3">
+            {userLocation ? (
+              <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-300">
+                <label htmlFor="radius" className="shrink-0">
+                  내 위치 반경 {radiusKm}km
+                </label>
+                <input
+                  id="radius"
+                  type="range"
+                  min={MIN_RADIUS_KM}
+                  max={MAX_RADIUS_KM}
+                  value={radiusKm}
+                  onChange={(e) => setRadiusKm(Number(e.target.value))}
+                  className="flex-1 accent-violet-30"
+                />
+              </div>
+            ) : (
+              geoError && <p className="text-xs text-zinc-400">{geoError}</p>
+            )}
+
+            {allMarkers.length === 0 && (
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                이 공고들은 좌표 정보가 없어서 지도에 표시할 수 없어요.
+              </p>
+            )}
+
+            {allMarkers.length > 0 && visibleMarkers.length === 0 && (
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                내 위치 반경 {radiusKm}km 안에는 공고가 없어요 (전체 {allMarkers.length}건 중{" "}
+                {hiddenByRadius}건이 반경 밖). 반경을 넓혀보세요.
+              </p>
+            )}
+
+            <KakaoMap markers={visibleMarkers} />
+          </div>
+        );
+      })()}
+
+      {viewMode === "list" && (
+        <div className="flex flex-col gap-4">
+          {jobs.map((job) => (
+            <JobCard key={job.id} job={job} userId={userId} profile={profile} />
+          ))}
+        </div>
+      )}
+
+      {hasNext && !loading && viewMode === "list" && (
         <Button
           variant="outline"
           onClick={loadMore}
