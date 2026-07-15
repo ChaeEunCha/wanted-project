@@ -28,6 +28,23 @@ function jobToMarker(job: JobWithBadges): MapMarkerData | null {
   };
 }
 
+const EARTH_RADIUS_KM = 6371;
+const MIN_RADIUS_KM = 1;
+const MAX_RADIUS_KM = 30;
+const DEFAULT_RADIUS_KM = 10;
+
+/** 두 좌표 간 직선거리(km) — PRD 5-7 "통근 필터 v1 범위"(직선 반경만, 소요시간 필터는 v2) */
+function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const sinLat = Math.sin(dLat / 2);
+  const sinLng = Math.sin(dLng / 2);
+  const h =
+    sinLat * sinLat + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * sinLng * sinLng;
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(h));
+}
+
 // openapi.json의 `/jobs` `locations` 파라미터는 배열 문자열일 뿐 별도 enum이 없어
 // 자주 쓰이는 지역명을 큐레이션한 정적 목록으로 대체한다.
 const REGION_OPTIONS = ["서울", "경기", "인천", "부산", "대구", "대전", "광주", "기타"];
@@ -82,6 +99,25 @@ export default function DashboardPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
+
+  useEffect(() => {
+    if (viewMode !== "map" || userLocation || geoError) return;
+    if (!navigator.geolocation) {
+      setGeoError("이 브라우저에서는 위치 정보를 사용할 수 없어요.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+      },
+      () => {
+        setGeoError("위치 권한을 허용하지 않아 반경 필터를 사용할 수 없어요. 전체 마커를 보여드려요.");
+      }
+    );
+  }, [viewMode, userLocation, geoError]);
 
   useEffect(() => {
     let cancelled = false;
@@ -235,7 +271,33 @@ export default function DashboardPage() {
       )}
 
       {viewMode === "map" && jobs.length > 0 && (
-        <KakaoMap markers={jobs.map(jobToMarker).filter((m) => m !== null)} />
+        <div className="flex flex-col gap-3">
+          {userLocation ? (
+            <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-300">
+              <label htmlFor="radius" className="shrink-0">
+                내 위치 반경 {radiusKm}km
+              </label>
+              <input
+                id="radius"
+                type="range"
+                min={MIN_RADIUS_KM}
+                max={MAX_RADIUS_KM}
+                value={radiusKm}
+                onChange={(e) => setRadiusKm(Number(e.target.value))}
+                className="flex-1 accent-violet-30"
+              />
+            </div>
+          ) : (
+            geoError && <p className="text-xs text-zinc-400">{geoError}</p>
+          )}
+
+          <KakaoMap
+            markers={jobs
+              .map(jobToMarker)
+              .filter((m) => m !== null)
+              .filter((m) => !userLocation || distanceKm(userLocation, m) <= radiusKm)}
+          />
+        </div>
       )}
 
       {viewMode === "list" && (
