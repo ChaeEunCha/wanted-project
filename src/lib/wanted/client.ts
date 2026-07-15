@@ -172,10 +172,11 @@ export interface JobListResult {
 export async function fetchJobList(params: JobListParams): Promise<JobListResult> {
   const searchParams = new URLSearchParams();
   params.categoryTags?.forEach((id) => searchParams.append("category_tags", String(id)));
-  // 라이브 API 확인 결과 `years=0`(단일/반복 키 모두) 형태는 500 InternalServerError를
-  // 반환하고, `years[]=0` 브래킷 표기만 정상 동작한다 (openapi.json에는 명시되지 않은 동작).
+  // 라이브 API 확인 결과 `years`/`locations` 모두 단일·반복 키 형태로는 무시되거나
+  // (locations는 빈 결과, years는 500) 동작하지 않고, `years[]`/`locations[]` 브래킷
+  // 표기만 정상 동작한다 (openapi.json에는 명시되지 않은 동작).
   params.years?.forEach((year) => searchParams.append("years[]", String(year)));
-  params.locations?.forEach((location) => searchParams.append("locations", location));
+  params.locations?.forEach((location) => searchParams.append("locations[]", location));
   if (params.offset !== undefined) searchParams.set("offset", String(params.offset));
   if (params.limit !== undefined) searchParams.set("limit", String(params.limit));
 

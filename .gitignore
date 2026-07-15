@@ -2,6 +2,10 @@
 node_modules/
 .env
 .env*.local
+.env.development
+.env.production
+.env.local.example
+.env*
 *.log
 
 # next.js
