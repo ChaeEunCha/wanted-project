@@ -90,18 +90,22 @@ export function MatchDiagnosis({
           <p className="text-xs font-semibold text-zinc-400">
             이 스킬 채우면 매칭률 올라요
           </p>
+          {/* 실 API에서 skill_tags[].id가 null -> 0으로 내려오는 공고가 많아(wanted/client.ts
+              normalizeTag 참고) 한 공고 안에 id=0인 태그가 여러 개 섞일 수 있다. index를 key/DOM id에
+              섞어 렌더링 충돌은 막았지만, 체크 상태 자체는 여전히 skill_tag_id 기준이라 id=0인
+              태그끼리는 체크가 서로 연동된다 — 근본 해결은 실제 skill_tag_id 정합성 문제(더 큰 작업)에 달려있다. */}
           <ul className="mt-1.5 flex flex-col gap-1.5">
-            {gapTags.map((tag) => (
-              <li key={tag.id} className="flex items-center gap-2">
+            {gapTags.map((tag, index) => (
+              <li key={`${tag.id}-${index}`} className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  id={`gap-${job.id}-${tag.id}`}
+                  id={`gap-${job.id}-${tag.id}-${index}`}
                   checked={checkedIds.has(tag.id)}
                   onChange={(event) => handleToggle(tag.id, event.target.checked)}
                   className="h-4 w-4 rounded border-zinc-300 text-violet-40 focus:ring-violet-30"
                 />
                 <label
-                  htmlFor={`gap-${job.id}-${tag.id}`}
+                  htmlFor={`gap-${job.id}-${tag.id}-${index}`}
                   className={`text-sm ${
                     checkedIds.has(tag.id)
                       ? "text-zinc-400 line-through"
