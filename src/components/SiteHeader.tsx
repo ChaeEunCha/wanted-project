@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/Button";
 import { getSessionUser, logOut } from "@/lib/authStore";
 
 export function SiteHeader() {
@@ -43,35 +44,37 @@ export function SiteHeader() {
         >
           신입 구직자 대시보드
         </Link>
-        <nav className="flex items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400">
-          <Link href="/dashboard" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-            대시보드
-          </Link>
-          <Link href="/applications" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-            지원 현황
-          </Link>
-          <Link href="/profile" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-            마이페이지
-          </Link>
+        <div className="flex items-center gap-4">
+          <nav className="flex items-center gap-4 text-sm text-zinc-500 dark:text-zinc-400">
+            <Link href="/dashboard" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+              대시보드
+            </Link>
+            <Link href="/applications" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+              지원 현황
+            </Link>
+            <Link href="/profile" className="hover:text-zinc-900 dark:hover:text-zinc-100">
+              마이페이지
+            </Link>
+          </nav>
           {checked && isLoggedIn ? (
-            <button
-              type="button"
-              onClick={handleLogOut}
-              className="hover:text-zinc-900 dark:hover:text-zinc-100"
-            >
+            <Button variant="outline" size="sm" onClick={handleLogOut}>
               로그아웃
-            </button>
+            </Button>
           ) : (
-            <>
-              <Link href="/login" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-                로그인
+            <div className="flex items-center gap-2">
+              <Link href="/login">
+                <Button variant="outline" size="sm">
+                  로그인
+                </Button>
               </Link>
-              <Link href="/signup" className="hover:text-zinc-900 dark:hover:text-zinc-100">
-                회원가입
+              <Link href="/signup">
+                <Button variant="primary" size="sm">
+                  회원가입
+                </Button>
               </Link>
-            </>
+            </div>
           )}
-        </nav>
+        </div>
       </div>
     </header>
   );
