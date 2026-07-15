@@ -270,35 +270,51 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {viewMode === "map" && jobs.length > 0 && (
-        <div className="flex flex-col gap-3">
-          {userLocation ? (
-            <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-300">
-              <label htmlFor="radius" className="shrink-0">
-                내 위치 반경 {radiusKm}km
-              </label>
-              <input
-                id="radius"
-                type="range"
-                min={MIN_RADIUS_KM}
-                max={MAX_RADIUS_KM}
-                value={radiusKm}
-                onChange={(e) => setRadiusKm(Number(e.target.value))}
-                className="flex-1 accent-violet-30"
-              />
-            </div>
-          ) : (
-            geoError && <p className="text-xs text-zinc-400">{geoError}</p>
-          )}
+      {viewMode === "map" && jobs.length > 0 && (() => {
+        const allMarkers = jobs.map(jobToMarker).filter((m) => m !== null);
+        const visibleMarkers = allMarkers.filter(
+          (m) => !userLocation || distanceKm(userLocation, m) <= radiusKm
+        );
+        const hiddenByRadius = userLocation ? allMarkers.length - visibleMarkers.length : 0;
 
-          <KakaoMap
-            markers={jobs
-              .map(jobToMarker)
-              .filter((m) => m !== null)
-              .filter((m) => !userLocation || distanceKm(userLocation, m) <= radiusKm)}
-          />
-        </div>
-      )}
+        return (
+          <div className="flex flex-col gap-3">
+            {userLocation ? (
+              <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-300">
+                <label htmlFor="radius" className="shrink-0">
+                  내 위치 반경 {radiusKm}km
+                </label>
+                <input
+                  id="radius"
+                  type="range"
+                  min={MIN_RADIUS_KM}
+                  max={MAX_RADIUS_KM}
+                  value={radiusKm}
+                  onChange={(e) => setRadiusKm(Number(e.target.value))}
+                  className="flex-1 accent-violet-30"
+                />
+              </div>
+            ) : (
+              geoError && <p className="text-xs text-zinc-400">{geoError}</p>
+            )}
+
+            {allMarkers.length === 0 && (
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                이 공고들은 좌표 정보가 없어서 지도에 표시할 수 없어요.
+              </p>
+            )}
+
+            {allMarkers.length > 0 && visibleMarkers.length === 0 && (
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                내 위치 반경 {radiusKm}km 안에는 공고가 없어요 (전체 {allMarkers.length}건 중{" "}
+                {hiddenByRadius}건이 반경 밖). 반경을 넓혀보세요.
+              </p>
+            )}
+
+            <KakaoMap markers={visibleMarkers} />
+          </div>
+        );
+      })()}
 
       {viewMode === "list" && (
         <div className="flex flex-col gap-4">
