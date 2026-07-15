@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardDescription, CardTitle } from "@/components/ui/Card";
+import { FilterChip } from "@/components/ui/FilterChip";
+import type { CategoryTag } from "@/lib/types";
 
 interface TrendSkill {
   skill_tag_id: number;
@@ -36,13 +38,31 @@ function SkillBarRow({ skill, maxCount }: { skill: TrendSkill; maxCount: number 
 }
 
 export default function TrendsPage() {
+  const [categories, setCategories] = useState<CategoryTag[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [skills, setSkills] = useState<TrendSkill[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/trends/skills")
+    fetch("/api/tags/categories")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && Array.isArray(data.tags)) setCategories(data.tags);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    const query = selectedCategoryId ? `?category_tags=${selectedCategoryId}` : "";
+    fetch(`/api/trends/skills${query}`)
       .then((res) => {
         if (!res.ok) throw new Error("failed");
         return res.json();
@@ -59,7 +79,7 @@ export default function TrendsPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [selectedCategoryId]);
 
   const maxCount = skills.reduce((max, skill) => Math.max(max, skill.count), 0);
 
@@ -79,6 +99,24 @@ export default function TrendsPage() {
           <CardTitle>스킬 요구 빈도 TOP10</CardTitle>
           <CardDescription>표본 공고 기준 집계 결과이며 매일 갱신돼요.</CardDescription>
         </div>
+
+        {categories.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <FilterChip
+              label="전체"
+              selected={selectedCategoryId === null}
+              onClick={() => setSelectedCategoryId(null)}
+            />
+            {categories.map((category) => (
+              <FilterChip
+                key={category.id}
+                label={category.title}
+                selected={selectedCategoryId === category.id}
+                onClick={() => setSelectedCategoryId(category.id)}
+              />
+            ))}
+          </div>
+        )}
 
         {loading && <p className="text-sm text-zinc-500 dark:text-zinc-400">불러오는 중...</p>}
         {error && <p className="text-sm text-red-500">{error}</p>}
