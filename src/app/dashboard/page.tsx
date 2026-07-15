@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -242,7 +243,7 @@ function JobCard({ job }: { job: JobWithBadges }) {
           <Badge tone="green">진짜 신입 가능 · {job.entryLevelSupportingText}</Badge>
         )}
         {job.qualificationBadges.map((badge, index) => (
-          <Badge key={`${badge.category}-${index}`} tone="indigo">
+          <Badge key={`${badge.category}-${index}`} tone="violet">
             {badge.label}
           </Badge>
         ))}
@@ -259,14 +260,22 @@ function JobCard({ job }: { job: JobWithBadges }) {
         </div>
       )}
 
-      <a
-        href={job.url}
-        target="_blank"
-        rel="noreferrer"
-        className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
-      >
-        원티드에서 공고 보기 →
-      </a>
+      <div className="flex flex-wrap items-center gap-4">
+        <Link
+          href={`/dashboard/${job.id}`}
+          className="text-sm font-medium text-violet-60 hover:underline dark:text-violet-30"
+        >
+          회사 정보 보기 →
+        </Link>
+        <a
+          href={job.url}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+        >
+          원티드에서 공고 보기 →
+        </a>
+      </div>
     </Card>
   );
 }
