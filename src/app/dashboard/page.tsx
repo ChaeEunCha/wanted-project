@@ -61,6 +61,7 @@ const PAGE_SIZE = 12;
 
 export default function DashboardPage() {
   const [categories, setCategories] = useState<CategoryTag[]>([]);
+  const [expandedCategoryIds, setExpandedCategoryIds] = useState<number[]>([]);
   const [selectedSubTags, setSelectedSubTags] = useState<CategorySubTag[]>([]);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [jobs, setJobs] = useState<JobWithBadges[]>([]);
@@ -195,6 +196,12 @@ export default function DashboardPage() {
     }
   }
 
+  function toggleExpandedCategory(categoryId: number) {
+    setExpandedCategoryIds((prev) =>
+      prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId]
+    );
+  }
+
   function toggleSubTag(tag: CategorySubTag) {
     setSelectedSubTags((prev) =>
       prev.some((t) => t.id === tag.id) ? prev.filter((t) => t.id !== tag.id) : [...prev, tag]
@@ -221,13 +228,29 @@ export default function DashboardPage() {
       <Card className="flex flex-col gap-6">
         <div>
           <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">직군</span>
-          <div className="mt-3 flex flex-col gap-4">
-            {categories.map((category) => (
-              <div key={category.id}>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                  {category.title}
-                </p>
-                <div className="flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-col gap-3">
+            <div className="flex flex-wrap gap-2">
+              {categories.map((category) => {
+                const subTagCount = category.sub_tags.filter((subTag) =>
+                  selectedSubTags.some((t) => t.id === subTag.id)
+                ).length;
+                return (
+                  <FilterChip
+                    key={category.id}
+                    label={subTagCount > 0 ? `${category.title} (${subTagCount})` : category.title}
+                    selected={expandedCategoryIds.includes(category.id)}
+                    onClick={() => toggleExpandedCategory(category.id)}
+                  />
+                );
+              })}
+            </div>
+            {categories
+              .filter((category) => expandedCategoryIds.includes(category.id))
+              .map((category) => (
+                <div
+                  key={category.id}
+                  className="flex flex-wrap gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-800"
+                >
                   {category.sub_tags.map((subTag) => (
                     <FilterChip
                       key={subTag.id}
@@ -237,8 +260,7 @@ export default function DashboardPage() {
                     />
                   ))}
                 </div>
-              </div>
-            ))}
+              ))}
             {categories.length === 0 && (
               <p className="text-sm text-zinc-400">직군 목록을 불러오는 중...</p>
             )}
